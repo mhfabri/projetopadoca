@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+            text-align: center;
+        }
+        input {
+            display: block;
+            margin: 10px auto;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+        button {
+            background-color: #0AA2FF;
+            color: white;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Login</h1>
+    <input type="text" id="username" placeholder="Usuário">
+    <input type="password" id="password" placeholder="Senha">
+    <button onclick="verificarLogin()">Entrar</button>
+
+    <script>
+        const usuarios = {
+            "admin": "1234", // Exemplo de usuário e senha
+            "usuario1": "senha1"
+        };
+
+        function verificarLogin() {
+            let user = document.getElementById("username").value;
+            let pass = document.getElementById("password").value;
+
+            if (usuarios[user] && usuarios[user] === pass) {
+                sessionStorage.setItem("logado", "true"); // Salva o login temporário
+                window.location.href = "index.html"; // Redireciona
+            } else {
+                alert("Usuário ou senha incorretos!");
+            }
+        }
+    </script>
+</body>
+</html>

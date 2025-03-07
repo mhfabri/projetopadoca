@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerenciamento de Clientes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+        }
+        .cliente {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 0px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            background-color: white;
+            border-radius: 15px;
+        }
+        th {
+            background-color: white;
+            border-color: black;
+            border:0px;
+            border-radius:15px;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+        }
+        input {
+            border-radius: 5px;
+            color: black;
+            background-color: white;
+            font-size: 25px;
+        }
+        p {
+            color: white;
+            font-size: 20px;
+        }
+        button {
+            background-color: #0AA2FF ;
+            color: white;
+            border-color: white;
+            border-radius: 25px;
+            border-width:5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gerenciamento de Clientes</h1>
+    <input type="text" id="searchInput" placeholder="Pesquisar cliente" oninput="pesquisarCliente()">
+    <button onclick="novoCliente()">Novo Cliente</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Valor a Pagar</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="clientesTableBody"></tbody>
+    </table>
+
+    <script>
+
+        // Verifica se o usuário fez login corretamente
+        if (sessionStorage.getItem("logado") !== "true") {
+        window.location.href = "login.html"; // Se não estiver logado, volta para a tela de login
+        }
+
+        let clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+
+        function salvarDados() {
+            localStorage.setItem('clientes', JSON.stringify(clientes));
+        }
+
+        function gerarIdUnico() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        }
+
+        function formatarDataParaExibicao(dataISO) {
+            let [ano, mes, dia] = dataISO.split("-");
+            return `${dia}/${mes}/${ano}`; // Correção do erro de template string
+        }
+
+        function formatarDataParaSalvar(dataBR) {
+            let [dia, mes, ano] = dataBR.split("/");
+            return `${ano}-${mes}-${dia}`; // Correção do erro de template string
+        }
+
+        function novoCliente() {
+            let nome = prompt("Digite o nome do cliente:");
+            if (nome) {
+                let cliente = { id: gerarIdUnico(), nome: nome, gastos: [], pagamentos: [] };
+                clientes.push(cliente);
+                salvarDados();
+                exibirClientes();
+            }
+        }
+
+        function adicionarGasto(idCliente) {
+            let cliente = clientes.find(c => c.id === idCliente);
+            if (!cliente) return;
+
+            let valor = parseFloat(prompt("Digite o valor do gasto:"));
+            if (isNaN(valor) || valor <= 0) {
+                alert("Digite um valor válido.");
+                return;
+            }
+            let dataHora = new Date().toISOString().split('T')[0];
+            cliente.gastos.push({ valor: valor, data: formatarDataParaExibicao(dataHora) });
+
+            salvarDados();
+            exibirClientes();
+        }
+
+        function editarDataGasto(idCliente, indexGasto) {
+            let cliente = clientes.find(c => c.id === idCliente);
+            if (!cliente) return;
+
+            let novaData = prompt("Digite a nova data (DD/MM/YYYY):", cliente.gastos[indexGasto].data);
+            if (!novaData || !/^\d{2}\/\d{2}\/\d{4}$/.test(novaData)) {
+                alert("Formato de data inválido!");
+                return;
+            }
+
+            cliente.gastos[indexGasto].data = novaData;
+            salvarDados();
+            exibirClientes();
+        }
+
+        function registrarPagamento(idCliente) {
+            let cliente = clientes.find(c => c.id === idCliente);
+            if (!cliente) return;
+
+            let valor = parseFloat(prompt("Digite o valor do pagamento:"));
+            if (isNaN(valor) || valor <= 0) {
+                alert("Digite um valor válido.");
+                return;
+            }
+
+            let totalPendente = calcularTotal(cliente.gastos) - calcularTotal(cliente.pagamentos);
+            if (valor > totalPendente) {
+                alert("O valor do pagamento é maior do que o valor pendente.");
+                return;
+            }
+
+            let dataHora = new Date().toISOString().split('T')[0];
+            cliente.pagamentos.push({ valor: valor, data: formatarDataParaExibicao(dataHora) });
+
+            salvarDados();
+            exibirClientes();
+        }
+
+        function editarDataPagamento(idCliente, indexPagamento) {
+            let cliente = clientes.find(c => c.id === idCliente);
+            if (!cliente) return;
+
+            let novaData = prompt("Digite a nova data (DD/MM/YYYY):", cliente.pagamentos[indexPagamento].data);
+            if (!novaData || !/^\d{2}\/\d{2}\/\d{4}$/.test(novaData)) {
+                alert("Formato de data inválido!");
+                return;
+            }
+
+            cliente.pagamentos[indexPagamento].data = novaData;
+            salvarDados();
+            exibirClientes();
+        }
+
+        function excluirCliente(idCliente) {
+            if (confirm("Tem certeza que deseja excluir este cliente?")) {
+                clientes = clientes.filter(cliente => cliente.id !== idCliente);
+                salvarDados();
+                exibirClientes();
+            }
+        }
+
+        function excluirGasto(idCliente, indexGasto) {
+            let cliente = clientes.find(c => c.id === idCliente);
+            if (!cliente) return;
+
+            if (confirm("Tem certeza que deseja excluir este gasto?")) {
+                cliente.gastos.splice(indexGasto, 1);
+                salvarDados();
+                exibirClientes();
+            }
+        }
+
+        function excluirPagamento(idCliente, indexPagamento) {
+            let cliente = clientes.find(c => c.id === idCliente);
+            if (!cliente) return;
+
+            if (confirm("Tem certeza que deseja excluir este pagamento?")) {
+                cliente.pagamentos.splice(indexPagamento, 1);
+                salvarDados();
+                exibirClientes();
+            }
+        }
+
+        function calcularTotal(lista) {
+            return lista.reduce((total, item) => total + item.valor, 0);
+        }
+
+        function toggleDetalhes(idCliente) {
+            let detalhes = document.getElementById(`detalhes-${idCliente}`); // Correção da interpolação
+            detalhes.style.display = detalhes.style.display === "none" ? "table-row" : "none";
+        }
+
+        function exibirClientes(clientesParaExibir = clientes) {
+            let clientesTableBody = document.getElementById("clientesTableBody");
+            clientesTableBody.innerHTML = "";
+
+            clientesParaExibir.forEach((cliente) => {
+                let totalGasto = calcularTotal(cliente.gastos);
+                let totalPago = calcularTotal(cliente.pagamentos);
+                let valorPendente = totalGasto - totalPago;
+
+                let clienteRow = `
+                    <tr class="cliente" onclick="toggleDetalhes('${cliente.id}')">
+                        <td>${cliente.nome}</td>
+                        <td>R$ ${valorPendente.toFixed(2)}</td>
+                        <td>
+                            <button onclick="event.stopPropagation(); adicionarGasto('${cliente.id}')">Adicionar Gasto</button>
+                            <button onclick="event.stopPropagation(); registrarPagamento('${cliente.id}')">Registrar Pagamento</button>
+                            <button onclick="event.stopPropagation(); excluirCliente('${cliente.id}')">Excluir Cliente</button>
+                        </td>
+                    </tr>
+                    <tr id="detalhes-${cliente.id}" class="detalhes" style="display: none;">
+                        <td colspan="3">
+                            <table width="100%">
+                                <tr>
+                                    <th>Gastos</th>
+                                    <th>Pagamentos</th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        ${cliente.gastos.map((gasto, i) => `
+                                            R$ ${gasto.valor.toFixed(2)} - <b>${gasto.data}</b>
+                                            <button onclick="event.stopPropagation(); editarDataGasto('${cliente.id}', ${i})">Editar Data</button>
+                                            <button onclick="event.stopPropagation(); excluirGasto('${cliente.id}', ${i})" class="delete-btn">Excluir</button>
+                                        `).join("<br>")}
+                                    </td>
+                                    <td>
+                                        ${cliente.pagamentos.map((pagamento, i) => `
+                                            R$ ${pagamento.valor.toFixed(2)} - <b>${pagamento.data}</b>
+                                            <button onclick="event.stopPropagation(); editarDataPagamento('${cliente.id}', ${i})">Editar Data</button>
+                                            <button onclick="event.stopPropagation(); excluirPagamento('${cliente.id}', ${i})" class="delete-btn">Excluir</button>
+                                        `).join("<br>")}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                `;
+
+                clientesTableBody.innerHTML += clienteRow;
+            });
+        }
+
+        exibirClientes();
+    </script>
+</body>
+</html>
